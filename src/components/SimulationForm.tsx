@@ -10,6 +10,14 @@ import { toast } from 'sonner'
 import OutcomeCard from './OutcomeCard'
 import { Skeleton } from '@/components/ui/skeleton'
 
+const CATEGORIES = [
+  { value: 'Personal Growth', emoji: '🌱', placeholder: 'e.g., Should I start meditating daily? Should I learn a new skill?' },
+  { value: 'Career', emoji: '💼', placeholder: 'e.g., Should I quit my job to freelance? Should I take this promotion?' },
+  { value: 'Education', emoji: '🎓', placeholder: 'e.g., Should I pursue a Masters? Should I switch my major?' },
+  { value: 'Relationships', emoji: '❤️', placeholder: 'e.g., Should I move in with my partner? Should I confront my friend?' },
+  { value: 'Finance', emoji: '💰', placeholder: 'e.g., Should I invest in stocks? Should I buy a house now?' },
+]
+
 export default function SimulationForm() {
   const { user } = useAuth()
   const [outcomes, setOutcomes] = useState<{best_case: string, average_case: string, worst_case: string} | null>(null)
@@ -17,6 +25,7 @@ export default function SimulationForm() {
   const [simulationId, setSimulationId] = useState<string | null>(null)
   const [voteCounts, setVoteCounts] = useState({ best: 0, average: 0, worst: 0 })
   const [userVote, setUserVote] = useState<'best' | 'average' | 'worst' | null>(null)
+  const [category, setCategory] = useState('Personal Growth')
 
   const formik = useFormik({
     initialValues: { situation: '' },
@@ -34,7 +43,7 @@ export default function SimulationForm() {
         const res = await fetch('/api/gemini', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ situation: values.situation })
+          body: JSON.stringify({ situation: `[Category: ${category}] ${values.situation}` })
         })
         const data = await res.json()
         if (!res.ok) throw new Error(data.error)
@@ -48,6 +57,7 @@ export default function SimulationForm() {
               best_case: data.best_case,
               average_case: data.average_case,
               worst_case: data.worst_case,
+              category: category,
               user_id: user.id
             })
             setSimulationId(saved.id)
@@ -98,6 +108,27 @@ export default function SimulationForm() {
   return (
     <div className="flex flex-col gap-8 max-w-3xl mx-auto w-full">
       <form onSubmit={formik.handleSubmit} className="flex flex-col gap-4">
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-slate-300">Category</label>
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+            {CATEGORIES.map(cat => (
+              <button
+                key={cat.value}
+                type="button"
+                onClick={() => setCategory(cat.value)}
+                className={`px-3 py-2 rounded-xl text-sm transition-all ${
+                  category === cat.value 
+                    ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white border border-purple-400 shadow-lg shadow-purple-500/30' 
+                    : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-white/10'
+                }`}
+              >
+                <span className="mr-1">{cat.emoji}</span>
+                <span>{cat.value}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-slate-300">Your Situation or Decision</label>
@@ -175,7 +206,7 @@ export default function SimulationForm() {
                   onClick={() => {
                     const text = `🔮 My Future Simulation:\n\nSituation: ${formik.values.situation}\n\n🌟 Best: ${outcomes.best_case}\n\n⚖️ Average: ${outcomes.average_case}\n\n⚠️ Worst: ${outcomes.worst_case}\n\nTry it: ${window.location.origin}`
                     navigator.clipboard.writeText(text)
-                    toast.success('Link copied! Share with friends 🚀')
+                    toast.success('Link copied!')
                   }}
                   className="text-xs bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-4 py-2 rounded-xl"
                 >
@@ -185,32 +216,23 @@ export default function SimulationForm() {
 
               <div className="flex flex-col gap-3">
                 <p className="text-sm text-slate-400">
-                  {userVote ? '✓ You voted! Click again to change' : 'Which future feels most likely to you?'}
+                  {userVote ? '✓ You voted! Click to change' : 'Which future feels most likely?'}
                 </p>
                 <div className="grid grid-cols-3 gap-2">
-                  <button 
-                    onClick={() => handleVote('best')}
-                    className={`p-3 border rounded-xl transition-all ${userVote === 'best' ? 'bg-green-500/30 border-green-400 scale-105' : 'bg-green-500/10 border-green-400/30 hover:bg-green-500/20'}`}
-                  >
+                  <button onClick={() => handleVote('best')} className={`p-3 border rounded-xl transition-all ${userVote === 'best' ? 'bg-green-500/30 border-green-400 scale-105' : 'bg-green-500/10 border-green-400/30 hover:bg-green-500/20'}`}>
                     <div className="text-2xl mb-1">🌟</div>
                     <p className="text-xs text-green-300">Best Case</p>
-                    <p className="text-xs text-slate-400 mt-1">{voteCounts.best} votes ({pct(voteCounts.best)}%)</p>
+                    <p className="text-xs text-slate-400 mt-1">{voteCounts.best} ({pct(voteCounts.best)}%)</p>
                   </button>
-                  <button 
-                    onClick={() => handleVote('average')}
-                    className={`p-3 border rounded-xl transition-all ${userVote === 'average' ? 'bg-blue-500/30 border-blue-400 scale-105' : 'bg-blue-500/10 border-blue-400/30 hover:bg-blue-500/20'}`}
-                  >
+                  <button onClick={() => handleVote('average')} className={`p-3 border rounded-xl transition-all ${userVote === 'average' ? 'bg-blue-500/30 border-blue-400 scale-105' : 'bg-blue-500/10 border-blue-400/30 hover:bg-blue-500/20'}`}>
                     <div className="text-2xl mb-1">⚖️</div>
                     <p className="text-xs text-blue-300">Average</p>
-                    <p className="text-xs text-slate-400 mt-1">{voteCounts.average} votes ({pct(voteCounts.average)}%)</p>
+                    <p className="text-xs text-slate-400 mt-1">{voteCounts.average} ({pct(voteCounts.average)}%)</p>
                   </button>
-                  <button 
-                    onClick={() => handleVote('worst')}
-                    className={`p-3 border rounded-xl transition-all ${userVote === 'worst' ? 'bg-red-500/30 border-red-400 scale-105' : 'bg-red-500/10 border-red-400/30 hover:bg-red-500/20'}`}
-                  >
+                  <button onClick={() => handleVote('worst')} className={`p-3 border rounded-xl transition-all ${userVote === 'worst' ? 'bg-red-500/30 border-red-400 scale-105' : 'bg-red-500/10 border-red-400/30 hover:bg-red-500/20'}`}>
                     <div className="text-2xl mb-1">⚠️</div>
                     <p className="text-xs text-red-300">Worst</p>
-                    <p className="text-xs text-slate-400 mt-1">{voteCounts.worst} votes ({pct(voteCounts.worst)}%)</p>
+                    <p className="text-xs text-slate-400 mt-1">{voteCounts.worst} ({pct(voteCounts.worst)}%)</p>
                   </button>
                 </div>
               </div>

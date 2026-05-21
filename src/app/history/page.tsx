@@ -11,12 +11,30 @@ import { toast } from 'sonner'
 import moment from 'moment'
 import OutcomeCard from '@/components/OutcomeCard'
 
+const CATEGORIES = [
+  { value: 'all', label: 'All', emoji: '📋' },
+  { value: 'Personal Growth', label: 'Personal Growth', emoji: '🌱' },
+  { value: 'Career', label: 'Career', emoji: '💼' },
+  { value: 'Education', label: 'Education', emoji: '🎓' },
+  { value: 'Relationships', label: 'Relationships', emoji: '❤️' },
+  { value: 'Finance', label: 'Finance', emoji: '💰' },
+]
+
+const categoryEmoji: Record<string, string> = {
+  'Personal Growth': '🌱',
+  'Career': '💼',
+  'Education': '🎓',
+  'Relationships': '❤️',
+  'Finance': '💰',
+}
+
 export default function History() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
   const [sims, setSims] = useState<Simulation[]>([])
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<Simulation | null>(null)
+  const [filter, setFilter] = useState('all')
 
   useEffect(() => {
     if (!authLoading && !user) router.push('/')
@@ -46,6 +64,8 @@ export default function History() {
 
   if (authLoading) return null
 
+  const filteredSims = filter === 'all' ? sims : sims.filter(s => s.category === filter)
+
   return (
     <div className="flex flex-col gap-6 max-w-3xl mx-auto py-4">
       <div className="text-center">
@@ -55,14 +75,31 @@ export default function History() {
         <p className="text-slate-400 mt-2">Your past simulations</p>
       </div>
 
+      <div className="flex flex-wrap gap-2 justify-center">
+        {CATEGORIES.map(cat => (
+          <button
+            key={cat.value}
+            onClick={() => setFilter(cat.value)}
+            className={`px-3 py-2 rounded-xl text-sm transition-all ${
+              filter === cat.value 
+                ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white border border-purple-400' 
+                : 'bg-white/5 backdrop-blur-xl border border-white/10 text-slate-300 hover:bg-white/10'
+            }`}
+          >
+            <span className="mr-1">{cat.emoji}</span>
+            {cat.label}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <div className="grid gap-3">
           {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-2xl bg-white/5" />)}
         </div>
-      ) : sims.length === 0 ? (
+      ) : filteredSims.length === 0 ? (
         <div className="text-center py-20 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl">
           <p className="text-5xl mb-3">📭</p>
-          <p className="text-slate-400">No simulations yet</p>
+          <p className="text-slate-400">No simulations in this category yet</p>
           <button 
             onClick={() => router.push('/')} 
             className="mt-4 bg-gradient-to-r from-purple-600 to-cyan-600 text-white px-6 py-2 rounded-xl"
@@ -72,7 +109,7 @@ export default function History() {
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {sims.map(sim => (
+          {filteredSims.map(sim => (
             <div 
               key={sim.id} 
               onClick={() => setSelected(sim)}
@@ -80,6 +117,11 @@ export default function History() {
             >
               <div className="flex items-center justify-between gap-4">
                 <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">
+                      {categoryEmoji[sim.category] || '📋'} {sim.category || 'General'}
+                    </span>
+                  </div>
                   <p className="font-medium text-white line-clamp-2 group-hover:text-purple-300 transition-colors">
                     {sim.situation}
                   </p>
@@ -109,6 +151,11 @@ export default function History() {
           {selected && (
             <div className="flex flex-col gap-4">
               <div className="p-4 bg-white/5 rounded-2xl border border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs px-2 py-1 bg-purple-500/20 text-purple-300 rounded-full">
+                    {categoryEmoji[selected.category] || '📋'} {selected.category || 'General'}
+                  </span>
+                </div>
                 <p className="text-sm text-slate-400 mb-2">Situation:</p>
                 <p className="text-white">{selected.situation}</p>
                 <p className="text-xs text-slate-500 mt-2">
